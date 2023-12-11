@@ -120,6 +120,7 @@ function _copyTexture(input, output) {
 function _updatePosition(dt) {
   // swap
   var tmp = _positionRenderTarget;
+
   _positionRenderTarget = _positionRenderTarget2;
   _positionRenderTarget2 = tmp;
 
@@ -178,7 +179,6 @@ function update(dt) {
     _renderer.autoClearColor = false;
 
     var deltaRatio = dt / 16.6667;
-
     _positionShader.uniforms.speed.value = settings.speed * deltaRatio;
     _positionShader.uniforms.dieSpeed.value = settings.dieSpeed * deltaRatio;
     _positionShader.uniforms.radius.value = settings.radius;
@@ -198,7 +198,6 @@ function update(dt) {
       _positionShader.uniforms.mouse3d.value.lerp(_followPoint, 0.2);
     }
 
-    // _renderer.setClearColor(0, 0);
     _updatePosition(dt);
 
     _renderer.setClearColor(clearColor, clearAlpha);

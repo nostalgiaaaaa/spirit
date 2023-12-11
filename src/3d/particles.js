@@ -3,7 +3,6 @@ var THREE = require("three");
 var shaderParse = require("../helpers/shaderParse");
 var glslify = require("glslify");
 var simulator = require("./simulator");
-var MeshMotionMaterial = require("./postprocessing/motionBlur/MeshMotionMaterial");
 
 var container = (exports.container = undefined);
 exports.init = init;
@@ -76,18 +75,6 @@ function _createParticleMesh() {
     depthTest: true,
     depthWrite: true,
     side: THREE.BackSide,
-    blending: THREE.NoBlending,
-  });
-
-  mesh.motionMaterial = new MeshMotionMaterial({
-    uniforms: {
-      texturePosition: { type: "t", value: undefined },
-      texturePrevPosition: { type: "t", value: undefined },
-    },
-    vertexShader: shaderParse(glslify("../glsl/particlesMotion.vert")),
-    depthTest: true,
-    depthWrite: true,
-    side: THREE.DoubleSide,
     blending: THREE.NoBlending,
   });
 
@@ -206,19 +193,6 @@ function _createTriangleMesh() {
     blending: THREE.NoBlending,
   });
 
-  mesh.motionMaterial = new MeshMotionMaterial({
-    uniforms: {
-      texturePosition: { type: "t", value: undefined },
-      texturePrevPosition: { type: "t", value: undefined },
-      flipRatio: { type: "f", value: 0 },
-    },
-    vertexShader: shaderParse(glslify("../glsl/trianglesMotion.vert")),
-    depthTest: true,
-    depthWrite: true,
-    side: THREE.DoubleSide,
-    blending: THREE.NoBlending,
-  });
-
   mesh.castShadow = true;
   mesh.receiveShadow = true;
   container.add(mesh);
@@ -243,12 +217,10 @@ function update(dt) {
       simulator.positionRenderTarget;
     mesh.customDistanceMaterial.uniforms.texturePosition.value =
       simulator.positionRenderTarget;
-    mesh.motionMaterial.uniforms.texturePrevPosition.value =
-      simulator.prevPositionRenderTarget;
+
     if (mesh.material.uniforms.flipRatio) {
       mesh.material.uniforms.flipRatio.value ^= 1;
       mesh.customDistanceMaterial.uniforms.flipRatio.value ^= 1;
-      mesh.motionMaterial.uniforms.flipRatio.value ^= 1;
     }
   }
 }

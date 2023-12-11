@@ -11,10 +11,6 @@ var settings = require("./core/settings");
 var mobile = require("./fallback/mobile");
 var encode = require("mout/queryString/encode");
 
-var postprocessing = require("./3d/postprocessing/postprocessing");
-var motionBlur = require("./3d/postprocessing/motionBlur/motionBlur");
-var fxaa = require("./3d/postprocessing/fxaa/fxaa");
-var bloom = require("./3d/postprocessing/bloom/bloom");
 var fboHelper = require("./3d/fboHelper");
 var simulator = require("./3d/simulator");
 var particles = require("./3d/particles");
@@ -75,7 +71,6 @@ function init() {
   settings.cameraPosition = _camera.position;
 
   fboHelper.init(_renderer);
-  postprocessing.init(_renderer, _scene, _camera);
 
   simulator.init(_renderer);
   particles.init();
@@ -129,47 +124,6 @@ function init() {
   renderingGui.addColor(settings, "bgColor").name("background Color");
   renderingGui.open();
 
-  var postprocessingGui = _gui.addFolder("Post-Processing");
-  postprocessingGui.add(settings, "fxaa").listen();
-  motionBlur.maxDistance = 120;
-  motionBlur.motionMultiplier = 7;
-  motionBlur.linesRenderTargetScale = 1;
-  var motionBlurControl = postprocessingGui.add(settings, "motionBlur");
-  var motionMaxDistance = postprocessingGui
-    .add(motionBlur, "maxDistance", 1, 300)
-    .name("motion distance")
-    .listen();
-  var motionMultiplier = postprocessingGui
-    .add(motionBlur, "motionMultiplier", 0.1, 15)
-    .name("motion multiplier")
-    .listen();
-
-  var controlList = [motionMaxDistance, motionMultiplier];
-  motionBlurControl.onChange(enableGuiControl.bind(this, controlList));
-  enableGuiControl(controlList, settings.motionBlur);
-
-  var bloomControl = postprocessingGui.add(settings, "bloom");
-  var bloomRadiusControl = postprocessingGui
-    .add(bloom, "blurRadius", 0, 3)
-    .name("bloom radius");
-  var bloomAmountControl = postprocessingGui
-    .add(bloom, "amount", 0, 3)
-    .name("bloom amount");
-  controlList = [bloomRadiusControl, bloomAmountControl];
-  bloomControl.onChange(enableGuiControl.bind(this, controlList));
-  enableGuiControl(controlList, settings.bloom);
-  postprocessingGui.open();
-
-  function enableGuiControl(controls, flag) {
-    controls = controls.length ? controls : [controls];
-    var control;
-    for (var i = 0, len = controls.length; i < len; i++) {
-      control = controls[i];
-      control.__li.style.pointerEvents = flag ? "auto" : "none";
-      control.domElement.parentNode.style.opacity = flag ? 1 : 0.1;
-    }
-  }
-
   var preventDefault = function (evt) {
     evt.preventDefault();
     this.blur();
@@ -207,22 +161,21 @@ function _onResize() {
   _width = window.innerWidth;
   _height = window.innerHeight;
 
-  postprocessing.resize(_width, _height);
+  _renderer.setSize(_width, _height);
+  _camera.aspect = _width / _height;
+  _camera.updateProjectionMatrix();
 }
 
 function _loop() {
   var newTime = Date.now();
   raf(_loop);
   if (settings.useStats) _stats.begin();
-  _render(newTime - _time, newTime);
+  _render(newTime - _time);
   if (settings.useStats) _stats.end();
   _time = newTime;
 }
 
-function _render(dt, newTime) {
-  motionBlur.skipMatrixUpdate =
-    !(settings.dieSpeed || settings.speed) && settings.motionBlurPause;
-
+function _render(dt) {
   _bgColor.setStyle(settings.bgColor);
   var tmpColor = floor.mesh.material.color;
   tmpColor.lerp(_bgColor, 0.05);
@@ -234,7 +187,7 @@ function _render(dt, newTime) {
   simulator.initAnimation = _initAnimation;
   _control.maxDistance = _initAnimation === 1 ? 1000 : 450;
   _control.update();
-  lights.update(dt, _camera);
+  lights.update();
 
   // update mouse3d
   _camera.updateMatrixWorld();
@@ -251,11 +204,7 @@ function _render(dt, newTime) {
   simulator.update(dt);
   particles.update();
 
-  fxaa.enabled = !!settings.fxaa;
-  motionBlur.enabled = !!settings.motionBlur;
-  bloom.enabled = !!settings.bloom;
-  // _renderer.render(_scene, _camera);
-  postprocessing.render(dt, newTime);
+  _renderer.render(_scene, _camera);
 }
 
 mobile.pass(init);
